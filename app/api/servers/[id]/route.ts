@@ -10,24 +10,26 @@ export async function GET(
   try {
     const { id } = await params;
     const authHeader = request.headers.get("Authorization");
-    const userToken = authHeader?.replace("Bearer ", "");
+    const userId = authHeader?.replace("Bearer ", "");
 
-    if (!userToken) {
+    if (!userId) {
       return NextResponse.json(
         { error: "Authentication required" },
         { status: 401 }
       );
     }
 
-    // Fetch server details from TCAdmin
-    const response = await fetch(`${TCADMIN_API_URL}/api/services/${id}`, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${TCADMIN_API_KEY}`,
-        "X-User-Token": userToken,
-      },
-    });
+    // Fetch server details from TCAdmin using correct api_key header
+    const response = await fetch(
+      `${TCADMIN_API_URL}/api/service/${id}`,
+      {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          "api_key": TCADMIN_API_KEY,
+        },
+      }
+    );
 
     if (!response.ok) {
       return NextResponse.json(
@@ -36,29 +38,37 @@ export async function GET(
       );
     }
 
-    const server = await response.json();
+    const data = await response.json();
+
+    if (!data.Success || !data.Result) {
+      return NextResponse.json(
+        { error: "Server not found" },
+        { status: 404 }
+      );
+    }
+
+    const server = data.Result;
 
     return NextResponse.json({
-      id: server.service_id || server.id,
-      name: server.display_name || server.name,
-      game: server.game_name || server.game,
-      status: server.status,
-      ip: server.ip_address || server.ip,
-      port: server.game_port || server.port,
-      queryPort: server.query_port,
-      ftpPort: server.ftp_port,
-      slots: server.slots,
-      players: server.online_players || 0,
-      location: server.datacenter || server.location,
-      cpu: server.cpu_usage || 0,
-      memory: server.memory_usage || 0,
-      memoryMax: server.memory_limit || 0,
-      disk: server.disk_usage || 0,
-      diskMax: server.disk_limit || 0,
-      bandwidth: server.bandwidth_usage || 0,
-      startedAt: server.started_on,
-      owner: server.user_name,
-      autoRefresh: server.auto_restart || false,
+      id: server.ServiceId || server.service_id,
+      name: server.DisplayName || server.ConnectionInfo || "Game Server",
+      game: server.GameName || server.game_name || "Unknown",
+      status: getStatusString(server.ServiceStatus || server.Status),
+      ip: server.IpAddress || server.ip_address || "",
+      port: server.GamePort || server.game_port || 0,
+      queryPort: server.QueryPort || server.query_port,
+      ftpPort: server.FtpPort || server.ftp_port,
+      slots: server.Slots || server.slots || 0,
+      players: server.OnlinePlayers || server.online_players || 0,
+      location: server.Datacenter || server.datacenter || "Unknown",
+      cpu: server.CpuUsage || server.cpu_usage || 0,
+      memory: server.MemoryUsage || server.memory_usage || 0,
+      memoryMax: server.MemoryMb || server.memory_limit || 0,
+      disk: server.DiskUsage || server.disk_usage || 0,
+      diskMax: server.DiskMb || server.disk_limit || 0,
+      bandwidth: server.BandwidthUsage || server.bandwidth_usage || 0,
+      startedAt: server.StartedOn || server.started_on,
+      owner: server.UserName || server.user_name,
     });
   } catch (error) {
     console.error("Server details error:", error);
@@ -69,3 +79,20 @@ export async function GET(
   }
 }
 
+function getStatusString(status: unknown): string {
+  if (typeof status === "string") return status;
+  
+  switch (status) {
+    case 1:
+      return "Running";
+    case 2:
+      return "Starting";
+    case 3:
+      return "Stopping";
+    case 0:
+    case 4:
+      return "Stopped";
+    default:
+      return "Unknown";
+  }
+}

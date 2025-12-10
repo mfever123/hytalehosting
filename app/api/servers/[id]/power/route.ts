@@ -10,9 +10,9 @@ export async function POST(
   try {
     const { id } = await params;
     const authHeader = request.headers.get("Authorization");
-    const userToken = authHeader?.replace("Bearer ", "");
+    const userId = authHeader?.replace("Bearer ", "");
 
-    if (!userToken) {
+    if (!userId) {
       return NextResponse.json(
         { error: "Authentication required" },
         { status: 401 }
@@ -28,15 +28,20 @@ export async function POST(
       );
     }
 
-    // Send power command to TCAdmin
-    const response = await fetch(`${TCADMIN_API_URL}/api/services/${id}/${action}`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${TCADMIN_API_KEY}`,
-        "X-User-Token": userToken,
-      },
-    });
+    // Map action to TCAdmin endpoint
+    const tcadminAction = action === "start" ? "start" : action === "stop" ? "stop" : "restart";
+
+    // Send power command to TCAdmin using correct api_key header
+    const response = await fetch(
+      `${TCADMIN_API_URL}/api/service/${id}/${tcadminAction}`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "api_key": TCADMIN_API_KEY,
+        },
+      }
+    );
 
     if (!response.ok) {
       const errorText = await response.text();
@@ -44,6 +49,15 @@ export async function POST(
       return NextResponse.json(
         { error: `Failed to ${action} server` },
         { status: response.status }
+      );
+    }
+
+    const data = await response.json();
+
+    if (!data.Success) {
+      return NextResponse.json(
+        { error: data.Message || `Failed to ${action} server` },
+        { status: 500 }
       );
     }
 
@@ -59,4 +73,3 @@ export async function POST(
     );
   }
 }
-

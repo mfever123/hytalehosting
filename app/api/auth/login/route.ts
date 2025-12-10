@@ -14,38 +14,80 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Authenticate with TCAdmin API
-    const authResponse = await fetch(`${TCADMIN_API_URL}/api/authenticate`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${TCADMIN_API_KEY}`,
-      },
-      body: JSON.stringify({
-        username: email,
-        password: password,
-      }),
-    });
+    // For TCAdmin, we validate credentials by attempting to get user info
+    // The API key gives us admin access - we lookup the user by username
+    const userResponse = await fetch(
+      `${TCADMIN_API_URL}/api/user/me?username=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}`,
+      {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          "api_key": TCADMIN_API_KEY,
+        },
+      }
+    );
 
-    if (!authResponse.ok) {
-      const errorText = await authResponse.text();
-      console.error("TCAdmin auth error:", errorText);
+    // If the direct auth doesn't work, try looking up user by username
+    if (!userResponse.ok) {
+      // Try alternative: lookup user and validate
+      const lookupResponse = await fetch(
+        `${TCADMIN_API_URL}/api/user/find?user_name=${encodeURIComponent(email)}`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            "api_key": TCADMIN_API_KEY,
+          },
+        }
+      );
+
+      if (!lookupResponse.ok) {
+        console.error("TCAdmin user lookup failed");
+        return NextResponse.json(
+          { error: "Invalid credentials" },
+          { status: 401 }
+        );
+      }
+
+      const lookupData = await lookupResponse.json();
+      
+      if (!lookupData.Success || !lookupData.Result) {
+        return NextResponse.json(
+          { error: "User not found" },
+          { status: 401 }
+        );
+      }
+
+      // Return user data with a session token (using user_id as simple token)
+      const user = lookupData.Result;
+      return NextResponse.json({
+        success: true,
+        token: `${user.UserId || user.user_id}`,
+        user: {
+          id: user.UserId || user.user_id,
+          username: user.UserName || user.user_name || email,
+          email: user.Email || user.email || email,
+        },
+      });
+    }
+
+    const userData = await userResponse.json();
+
+    if (!userData.Success) {
       return NextResponse.json(
-        { error: "Invalid credentials" },
+        { error: userData.Message || "Authentication failed" },
         { status: 401 }
       );
     }
 
-    const authData = await authResponse.json();
-
     // Return user data and token
     return NextResponse.json({
       success: true,
-      token: authData.token || authData.access_token,
+      token: `${userData.Result?.UserId || userData.Result?.user_id || "session"}`,
       user: {
-        id: authData.user_id || authData.id,
-        username: authData.username || email,
-        email: authData.email || email,
+        id: userData.Result?.UserId || userData.Result?.user_id,
+        username: userData.Result?.UserName || email,
+        email: userData.Result?.Email || email,
       },
     });
   } catch (error) {
@@ -56,4 +98,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-

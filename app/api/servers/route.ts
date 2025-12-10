@@ -5,53 +5,64 @@ const TCADMIN_API_KEY = process.env.TCADMIN_API_KEY || "";
 
 export async function GET(request: NextRequest) {
   try {
-    // Get user token from authorization header
+    // Get user ID from authorization header (we store user_id as token)
     const authHeader = request.headers.get("Authorization");
-    const userToken = authHeader?.replace("Bearer ", "");
+    const userId = authHeader?.replace("Bearer ", "");
 
-    if (!userToken) {
+    if (!userId) {
       return NextResponse.json(
         { error: "Authentication required" },
         { status: 401 }
       );
     }
 
-    // Fetch user's servers from TCAdmin
-    const response = await fetch(`${TCADMIN_API_URL}/api/services`, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${TCADMIN_API_KEY}`,
-        "X-User-Token": userToken,
-      },
-    });
+    // Fetch user's services from TCAdmin using the correct api_key header
+    const response = await fetch(
+      `${TCADMIN_API_URL}/api/service/find?user_id=${userId}`,
+      {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          "api_key": TCADMIN_API_KEY,
+        },
+      }
+    );
 
     if (!response.ok) {
-      console.error("TCAdmin servers error:", await response.text());
+      const errorText = await response.text();
+      console.error("TCAdmin servers error:", errorText);
       return NextResponse.json(
         { error: "Failed to fetch servers" },
         { status: response.status }
       );
     }
 
-    const servers = await response.json();
+    const data = await response.json();
+
+    if (!data.Success) {
+      return NextResponse.json(
+        { error: data.Message || "Failed to fetch servers" },
+        { status: 500 }
+      );
+    }
 
     // Transform server data for our dashboard
-    const transformedServers = Array.isArray(servers) ? servers.map((server: Record<string, unknown>) => ({
-      id: server.service_id || server.id,
-      name: server.display_name || server.name,
-      game: server.game_name || server.game,
-      status: server.status || "unknown",
-      ip: server.ip_address || server.ip,
-      port: server.game_port || server.port,
-      slots: server.slots || 0,
-      players: server.online_players || 0,
-      location: server.datacenter || server.location,
-      cpu: server.cpu_usage || 0,
-      memory: server.memory_usage || 0,
-      disk: server.disk_usage || 0,
-      startedAt: server.started_on || null,
-    })) : [];
+    const servers = Array.isArray(data.Result) ? data.Result : [];
+    const transformedServers = servers.map((server: Record<string, unknown>) => ({
+      id: server.ServiceId || server.service_id,
+      name: server.DisplayName || server.ConnectionInfo || server.display_name || "Game Server",
+      game: server.GameName || server.game_name || "Unknown",
+      status: getStatusString(server.ServiceStatus || server.Status || server.status),
+      ip: server.IpAddress || server.ip_address || "",
+      port: server.GamePort || server.game_port || 0,
+      slots: server.Slots || server.slots || 0,
+      players: server.OnlinePlayers || server.online_players || 0,
+      location: server.Datacenter || server.datacenter || "Unknown",
+      cpu: server.CpuUsage || server.cpu_usage || 0,
+      memory: server.MemoryUsage || server.memory_usage || 0,
+      disk: server.DiskUsage || server.disk_usage || 0,
+      startedAt: server.StartedOn || server.started_on || null,
+    }));
 
     return NextResponse.json({ servers: transformedServers });
   } catch (error) {
@@ -63,3 +74,22 @@ export async function GET(request: NextRequest) {
   }
 }
 
+// Convert TCAdmin status codes to readable strings
+function getStatusString(status: unknown): string {
+  if (typeof status === "string") return status;
+  
+  // TCAdmin status codes
+  switch (status) {
+    case 1:
+      return "Running";
+    case 2:
+      return "Starting";
+    case 3:
+      return "Stopping";
+    case 0:
+    case 4:
+      return "Stopped";
+    default:
+      return "Unknown";
+  }
+}
