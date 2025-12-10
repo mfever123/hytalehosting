@@ -73,7 +73,7 @@ export async function GET(request: NextRequest) {
     console.log(`[Servers] Successfully fetched servers from: ${successEndpoint}`);
 
     // Transform server data for our dashboard
-    const transformedServers = servers.map((server: Record<string, unknown>) => {
+    const transformedServers = (servers as Record<string, unknown>[]).map((server) => {
       const transformed = {
         id: server.ServiceId || server.service_id || server.Id || server.id,
         name: server.DisplayName || server.ConnectionInfo || server.display_name || server.Name || "Game Server",
