@@ -3,14 +3,12 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Menu, X, Gamepad2 } from "lucide-react";
+import Link from "next/link";
 
 const navLinks = [
-  { name: "Create", href: "#create" },
-  { name: "Partners", href: "#partners" },
-  { name: "Blog", href: "#blog" },
-  { name: "Community", href: "#community" },
-  { name: "About Us", href: "#about" },
-  { name: "Support", href: "#support" },
+  { name: "Home", href: "/" },
+  { name: "Privacy Policy", href: "/privacy" },
+  { name: "Terms & Conditions", href: "/terms" },
 ];
 
 export default function Navbar() {
@@ -21,49 +19,55 @@ export default function Navbar() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-20">
           {/* Logo */}
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            className="flex items-center gap-3"
-          >
-            <div className="relative">
-              <Gamepad2 className="w-10 h-10 text-accent-cyan" />
-              <div className="absolute inset-0 blur-lg bg-accent-cyan/30" />
-            </div>
-            <div className="flex flex-col">
-              <span className="font-display font-bold text-xl tracking-wider text-white">
-                HYTALE
-              </span>
-              <span className="font-display text-xs tracking-widest text-accent-cyan">
-                HOSTING.AI
-              </span>
-            </div>
-          </motion.div>
+          <Link href="/">
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              className="flex items-center gap-3 cursor-pointer"
+            >
+              <div className="relative">
+                <Gamepad2 className="w-10 h-10 text-accent-cyan" />
+                <div className="absolute inset-0 blur-lg bg-accent-cyan/30" />
+              </div>
+              <div className="flex flex-col">
+                <span className="font-display font-bold text-xl tracking-wider text-white">
+                  HYTALE
+                </span>
+                <span className="font-display text-xs tracking-widest text-accent-cyan">
+                  HOSTING.AI
+                </span>
+              </div>
+            </motion.div>
+          </Link>
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center gap-8">
             {navLinks.map((link, index) => (
-              <motion.a
+              <motion.div
                 key={link.name}
-                href={link.href}
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.1 }}
-                className="text-gray-300 hover:text-accent-cyan transition-colors duration-300 font-medium text-sm tracking-wide"
               >
-                {link.name}
-              </motion.a>
+                <Link
+                  href={link.href}
+                  className="text-gray-300 hover:text-accent-cyan transition-colors duration-300 font-medium text-sm tracking-wide"
+                >
+                  {link.name}
+                </Link>
+              </motion.div>
             ))}
           </div>
 
           {/* Login Button */}
-          <motion.button
+          <motion.div
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
-            className="hidden md:block btn-secondary"
           >
-            Login
-          </motion.button>
+            <Link href="/login" className="hidden md:block btn-secondary">
+              Login
+            </Link>
+          </motion.div>
 
           {/* Mobile Menu Button */}
           <button
@@ -86,16 +90,22 @@ export default function Navbar() {
           >
             <div className="px-4 py-6 space-y-4">
               {navLinks.map((link) => (
-                <a
+                <Link
                   key={link.name}
                   href={link.href}
                   className="block text-gray-300 hover:text-accent-cyan transition-colors duration-300 font-medium"
                   onClick={() => setIsOpen(false)}
                 >
                   {link.name}
-                </a>
+                </Link>
               ))}
-              <button className="w-full btn-secondary mt-4">Login</button>
+              <Link 
+                href="/login" 
+                className="block w-full text-center btn-secondary mt-4"
+                onClick={() => setIsOpen(false)}
+              >
+                Login
+              </Link>
             </div>
           </motion.div>
         )}
@@ -103,4 +113,3 @@ export default function Navbar() {
     </nav>
   );
 }
-
