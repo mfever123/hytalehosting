@@ -16,28 +16,25 @@ export async function POST(request: NextRequest) {
 
     console.log(`[Login] Attempting login for user: ${email}`);
 
-    // Step 1: Find the user by username using TCAdmin API
-    const userSearchUrl = `${TCADMIN_API_URL}/api/user/find?user_name=${encodeURIComponent(email)}`;
-    console.log(`[Login] Searching for user at: ${userSearchUrl}`);
+    // Try multiple endpoint formats to find the user
+    const endpoints = [
+      // Query parameter format
+      `${TCADMIN_API_URL}/api/user?user_name=${encodeURIComponent(email)}`,
+      // Alternative query formats
+      `${TCADMIN_API_URL}/api/user?username=${encodeURIComponent(email)}`,
+      `${TCADMIN_API_URL}/api/user?name=${encodeURIComponent(email)}`,
+      // With method parameter
+      `${TCADMIN_API_URL}/api/user/getbyname?user_name=${encodeURIComponent(email)}`,
+      `${TCADMIN_API_URL}/api/user/search?user_name=${encodeURIComponent(email)}`,
+    ];
 
-    const userResponse = await fetch(userSearchUrl, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        "api_key": TCADMIN_API_KEY,
-      },
-    });
+    let userData = null;
+    let successEndpoint = "";
 
-    const userResponseText = await userResponse.text();
-    console.log(`[Login] User search response status: ${userResponse.status}`);
-    console.log(`[Login] User search response: ${userResponseText}`);
-
-    if (!userResponse.ok) {
-      // Try alternative endpoint
-      console.log(`[Login] Primary search failed, trying alternative...`);
+    for (const endpoint of endpoints) {
+      console.log(`[Login] Trying endpoint: ${endpoint}`);
       
-      const altUrl = `${TCADMIN_API_URL}/api/user?user_name=${encodeURIComponent(email)}`;
-      const altResponse = await fetch(altUrl, {
+      const response = await fetch(endpoint, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
@@ -45,52 +42,54 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      const altText = await altResponse.text();
-      console.log(`[Login] Alt response: ${altText}`);
+      const responseText = await response.text();
+      console.log(`[Login] Response from ${endpoint}: ${response.status} - ${responseText.substring(0, 300)}`);
 
-      if (!altResponse.ok) {
-        return NextResponse.json(
-          { error: "User not found" },
-          { status: 401 }
-        );
+      if (response.ok) {
+        try {
+          const data = JSON.parse(responseText);
+          
+          if (data.Success && data.Result) {
+            userData = data;
+            successEndpoint = endpoint;
+            console.log(`[Login] Success from: ${endpoint}`);
+            break;
+          }
+        } catch (parseError) {
+          console.log(`[Login] Failed to parse response from ${endpoint}`);
+        }
       }
     }
 
-    let userData;
-    try {
-      userData = JSON.parse(userResponseText);
-    } catch {
-      console.error(`[Login] Failed to parse response as JSON`);
+    if (!userData) {
+      console.log(`[Login] Could not find user: ${email}`);
       return NextResponse.json(
-        { error: "Invalid response from authentication server" },
-        { status: 500 }
+        { error: "Invalid credentials" },
+        { status: 401 }
       );
     }
 
-    console.log(`[Login] Parsed user data:`, JSON.stringify(userData, null, 2));
+    console.log(`[Login] Found user data from: ${successEndpoint}`);
+    console.log(`[Login] User data:`, JSON.stringify(userData, null, 2));
 
     // Extract user from the response
-    // TCAdmin returns { Success: true, Message: "", Result: { ... } } or Result could be an array
     let user = null;
     
-    if (userData.Success && userData.Result) {
-      if (Array.isArray(userData.Result)) {
-        // Find the user with matching username (case-insensitive)
-        user = userData.Result.find((u: Record<string, unknown>) => 
-          (u.UserName as string)?.toLowerCase() === email.toLowerCase() ||
-          (u.user_name as string)?.toLowerCase() === email.toLowerCase()
-        );
-        console.log(`[Login] Found user in array:`, user);
-      } else {
-        user = userData.Result;
-        console.log(`[Login] User is single object:`, user);
-      }
+    if (Array.isArray(userData.Result)) {
+      // Find the user with matching username (case-insensitive)
+      user = userData.Result.find((u: Record<string, unknown>) => 
+        String(u.UserName || u.user_name || "").toLowerCase() === email.toLowerCase()
+      );
+      console.log(`[Login] Found user in array:`, user);
+    } else if (typeof userData.Result === "object") {
+      user = userData.Result;
+      console.log(`[Login] User is single object:`, user);
     }
 
     if (!user) {
-      console.log(`[Login] No user found for: ${email}`);
+      console.log(`[Login] No matching user found for: ${email}`);
       return NextResponse.json(
-        { error: "User not found" },
+        { error: "Invalid credentials" },
         { status: 401 }
       );
     }
@@ -109,17 +108,6 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       );
     }
-
-    // Note: TCAdmin API doesn't have a direct password validation endpoint
-    // The password check happens on the web panel side
-    // For this integration, we're trusting that the user exists
-    // In production, you'd want to either:
-    // 1. Use TCAdmin's OAuth if available
-    // 2. Have users log in through TCAdmin directly and use session tokens
-    // 3. Set up a custom validation endpoint
-
-    // For now, we'll proceed with the found user
-    // TODO: Add proper password validation when TCAdmin endpoint is identified
 
     return NextResponse.json({
       success: true,
