@@ -3,17 +3,18 @@
 import { motion } from "framer-motion";
 import { MapPin } from "lucide-react";
 import { useState } from "react";
+import Image from "next/image";
 
 const locations = [
-  { name: "Helsinki", country: "Finland", x: 57, y: 22, ping: "12ms" },
-  { name: "London", country: "UK", x: 47, y: 28, ping: "18ms" },
-  { name: "Paris", country: "France", x: 49, y: 31, ping: "15ms" },
-  { name: "Montreal", country: "Canada", x: 26, y: 30, ping: "35ms" },
-  { name: "New York", country: "USA", x: 25, y: 35, ping: "28ms" },
-  { name: "Los Angeles", country: "USA", x: 14, y: 38, ping: "45ms" },
-  { name: "Miami", country: "USA", x: 23, y: 43, ping: "32ms" },
-  { name: "Singapore", country: "Singapore", x: 76, y: 55, ping: "85ms" },
-  { name: "Sydney", country: "Australia", x: 86, y: 72, ping: "120ms" },
+  { name: "Helsinki", country: "Finland", x: 55, y: 18 },
+  { name: "London", country: "UK", x: 46, y: 24 },
+  { name: "Paris", country: "France", x: 47, y: 28 },
+  { name: "Montreal", country: "Canada", x: 24, y: 26 },
+  { name: "New York", country: "USA", x: 24, y: 32 },
+  { name: "Los Angeles", country: "USA", x: 12, y: 34 },
+  { name: "Miami", country: "USA", x: 21, y: 40 },
+  { name: "Singapore", country: "Singapore", x: 77, y: 54 },
+  { name: "Sydney", country: "Australia", x: 88, y: 74 },
 ];
 
 export default function ServerLocations() {
@@ -41,35 +42,21 @@ export default function ServerLocations() {
           initial={{ opacity: 0, scale: 0.95 }}
           whileInView={{ opacity: 1, scale: 1 }}
           viewport={{ once: true }}
-          className="relative w-full aspect-[2/1] max-w-5xl mx-auto"
+          className="relative w-full max-w-5xl mx-auto"
         >
-          {/* Map Background */}
-          <div className="absolute inset-0 rounded-3xl overflow-hidden glass">
-            {/* Simplified World Map SVG */}
-            <svg
-              viewBox="0 0 100 50"
-              className="w-full h-full opacity-30"
-              preserveAspectRatio="xMidYMid slice"
-            >
-              {/* Continents simplified paths */}
-              <g fill="currentColor" className="text-accent-cyan/40">
-                {/* North America */}
-                <path d="M5,15 Q15,10 25,12 L30,18 Q28,25 25,30 L20,35 Q15,38 10,35 L8,28 Q5,22 5,15" />
-                {/* South America */}
-                <path d="M22,42 Q25,40 28,42 L30,48 Q28,52 25,55 L22,52 Q20,48 22,42" />
-                {/* Europe */}
-                <path d="M45,20 Q50,18 55,20 L58,25 Q55,30 52,32 L48,30 Q45,26 45,20" />
-                {/* Africa */}
-                <path d="M48,35 Q52,33 56,35 L58,42 Q55,50 52,52 L48,48 Q46,42 48,35" />
-                {/* Asia */}
-                <path d="M60,15 Q70,12 80,15 L85,22 Q82,30 78,35 L70,38 Q65,35 62,30 L60,22 Q58,18 60,15" />
-                {/* Australia */}
-                <path d="M78,55 Q82,52 88,55 L90,62 Q88,68 85,70 L80,68 Q77,62 78,55" />
-              </g>
-            </svg>
-
-            {/* Grid overlay */}
-            <div className="absolute inset-0 bg-grid opacity-50" />
+          {/* Map Image */}
+          <div className="relative w-full aspect-[16/9] rounded-3xl overflow-hidden">
+            {/* Background glow */}
+            <div className="absolute inset-0 bg-gradient-to-b from-accent-cyan/10 via-transparent to-accent-purple/10 z-0" />
+            
+            {/* Hytale World Map */}
+            <Image
+              src="/hytale-world-map.png"
+              alt="Hytale Server Locations World Map"
+              fill
+              className="object-contain z-10"
+              priority
+            />
 
             {/* Location Markers */}
             {locations.map((location, index) => (
@@ -79,34 +66,33 @@ export default function ServerLocations() {
                 whileInView={{ opacity: 1, scale: 1 }}
                 viewport={{ once: true }}
                 transition={{ delay: 0.5 + index * 0.1 }}
-                className="absolute"
+                className="absolute z-20"
                 style={{ left: `${location.x}%`, top: `${location.y}%` }}
                 onMouseEnter={() => setHoveredLocation(location.name)}
                 onMouseLeave={() => setHoveredLocation(null)}
               >
                 {/* Pulse ring */}
-                <div className="absolute inset-0 -m-2">
-                  <div className="w-6 h-6 rounded-full bg-accent-cyan/30 animate-ping" />
+                <div className="absolute inset-0 -m-3">
+                  <div className="w-8 h-8 rounded-full bg-accent-cyan/40 animate-ping" />
                 </div>
                 
                 {/* Marker dot */}
-                <div className="relative w-3 h-3 rounded-full bg-accent-cyan cursor-pointer hover:scale-150 transition-transform glow-cyan" />
+                <div className="relative w-4 h-4 rounded-full bg-accent-cyan cursor-pointer hover:scale-150 transition-transform glow-cyan border-2 border-white/50" />
                 
                 {/* Tooltip */}
                 {hoveredLocation === location.name && (
                   <motion.div
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 px-3 py-2 bg-dark-700 rounded-lg border border-accent-cyan/30 whitespace-nowrap z-10"
+                    className="absolute bottom-full left-1/2 -translate-x-1/2 mb-4 px-4 py-3 bg-dark-800/95 backdrop-blur-sm rounded-xl border border-accent-cyan/40 whitespace-nowrap z-30 shadow-lg shadow-accent-cyan/20"
                   >
                     <div className="flex items-center gap-2">
                       <MapPin className="w-4 h-4 text-accent-cyan" />
                       <span className="text-white font-semibold">{location.name}</span>
                     </div>
-                    <div className="text-gray-400 text-xs mt-1">{location.country}</div>
-                    <div className="text-accent-cyan text-xs font-mono">{location.ping}</div>
+                    <div className="text-gray-400 text-sm mt-1">{location.country}</div>
                     {/* Tooltip arrow */}
-                    <div className="absolute top-full left-1/2 -translate-x-1/2 border-8 border-transparent border-t-dark-700" />
+                    <div className="absolute top-full left-1/2 -translate-x-1/2 border-8 border-transparent border-t-dark-800/95" />
                   </motion.div>
                 )}
               </motion.div>
@@ -125,10 +111,11 @@ export default function ServerLocations() {
               transition={{ delay: index * 0.05 }}
               className="text-center"
             >
-              <div className="w-8 h-8 mx-auto rounded-full bg-dark-700 border border-accent-cyan/30 flex items-center justify-center mb-2">
-                <div className="w-2 h-2 rounded-full bg-accent-cyan" />
+              <div className="w-10 h-10 mx-auto rounded-full bg-dark-700 border border-accent-cyan/30 flex items-center justify-center mb-2 hover:border-accent-cyan hover:bg-dark-600 transition-all cursor-pointer group">
+                <div className="w-3 h-3 rounded-full bg-accent-cyan group-hover:scale-125 transition-transform" />
               </div>
               <span className="text-white text-sm font-medium block">{location.name}</span>
+              <span className="text-gray-500 text-xs">{location.country}</span>
             </motion.div>
           ))}
         </div>
@@ -148,4 +135,3 @@ export default function ServerLocations() {
     </section>
   );
 }
-
