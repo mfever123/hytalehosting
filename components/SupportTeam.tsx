@@ -4,43 +4,43 @@ import { motion } from "framer-motion";
 
 const teamMembers = [
   {
-    name: "Pearson Wright",
+    name: "Oliver Thompson",
     role: "Lead Support",
     avatar: "👨‍💻",
     color: "from-cyan-400 to-blue-500",
   },
   {
-    name: "James Greer",
+    name: "Michael Johnson",
     role: "Technical Expert",
     avatar: "👨‍🔧",
     color: "from-purple-400 to-pink-500",
   },
   {
-    name: "Peter North",
+    name: "William Davies",
     role: "Community Manager",
     avatar: "👨‍💼",
     color: "from-green-400 to-emerald-500",
   },
   {
-    name: "Nicholas Bailey",
+    name: "Daniel Martinez",
     role: "Server Specialist",
     avatar: "🧑‍💻",
     color: "from-orange-400 to-red-500",
   },
   {
-    name: "Easton Sampley",
+    name: "Ryan Mitchell",
     role: "Network Engineer",
     avatar: "👨‍🔬",
     color: "from-yellow-400 to-orange-500",
   },
   {
-    name: "Chris Heuvel",
+    name: "Thomas Anderson",
     role: "Security Expert",
     avatar: "🛡️",
     color: "from-indigo-400 to-purple-500",
   },
   {
-    name: "Robert Howard",
+    name: "David Wilson",
     role: "Customer Success",
     avatar: "🤝",
     color: "from-pink-400 to-rose-500",
