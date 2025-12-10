@@ -18,15 +18,14 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Try multiple endpoints to find the user's services
+    // TCAdmin API structure: /api/service returns all services
+    // We then filter by user ID on our side
     const endpoints = [
-      `${TCADMIN_API_URL}/api/service/find?user_id=${userId}`,
-      `${TCADMIN_API_URL}/api/service/find?owner_id=${userId}`,
-      `${TCADMIN_API_URL}/api/service?user_id=${userId}`,
-      `${TCADMIN_API_URL}/api/service/list?user_id=${userId}`,
+      `${TCADMIN_API_URL}/api/service`,
+      `${TCADMIN_API_URL}/api/service/list`,
     ];
 
-    let servers: unknown[] = [];
+    let allServices: Record<string, unknown>[] = [];
     let successEndpoint = "";
 
     for (const endpoint of endpoints) {
@@ -41,21 +40,22 @@ export async function GET(request: NextRequest) {
       });
 
       const responseText = await response.text();
-      console.log(`[Servers] Response from ${endpoint}: ${response.status} - ${responseText.substring(0, 500)}`);
+      console.log(`[Servers] Response status: ${response.status}`);
+      console.log(`[Servers] Response preview: ${responseText.substring(0, 500)}`);
 
       if (response.ok) {
         try {
           const data = JSON.parse(responseText);
           
           if (data.Success && data.Result) {
-            servers = Array.isArray(data.Result) ? data.Result : [data.Result];
+            allServices = Array.isArray(data.Result) ? data.Result : [data.Result];
             successEndpoint = endpoint;
-            console.log(`[Servers] Found ${servers.length} servers from: ${endpoint}`);
+            console.log(`[Servers] Got ${allServices.length} total services from: ${endpoint}`);
             break;
           } else if (Array.isArray(data)) {
-            servers = data;
+            allServices = data;
             successEndpoint = endpoint;
-            console.log(`[Servers] Found ${servers.length} servers (array) from: ${endpoint}`);
+            console.log(`[Servers] Got ${allServices.length} services (array) from: ${endpoint}`);
             break;
           }
         } catch (parseError) {
@@ -64,34 +64,42 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    if (servers.length === 0) {
-      console.log(`[Servers] No servers found for user ${userId}`);
-      // Return empty array instead of error - user might just have no servers
-      return NextResponse.json({ servers: [] });
+    // Filter services by user ID
+    const userIdNum = parseInt(userId, 10);
+    console.log(`[Servers] Filtering services for user ID: ${userIdNum}`);
+    
+    const userServices = allServices.filter((service) => {
+      const serviceUserId = service.UserId || service.user_id || service.OwnerId || service.owner_id;
+      const matches = serviceUserId === userIdNum || serviceUserId === userId;
+      if (matches) {
+        console.log(`[Servers] Found matching service: ${service.ServiceId || service.DisplayName}`);
+      }
+      return matches;
+    });
+
+    console.log(`[Servers] Found ${userServices.length} services for user ${userId}`);
+
+    if (userServices.length === 0 && allServices.length > 0) {
+      // Log a sample service to see the structure
+      console.log(`[Servers] Sample service structure:`, JSON.stringify(allServices[0], null, 2).substring(0, 500));
     }
 
-    console.log(`[Servers] Successfully fetched servers from: ${successEndpoint}`);
-
     // Transform server data for our dashboard
-    const transformedServers = (servers as Record<string, unknown>[]).map((server) => {
-      const transformed = {
-        id: server.ServiceId || server.service_id || server.Id || server.id,
-        name: server.DisplayName || server.ConnectionInfo || server.display_name || server.Name || "Game Server",
-        game: server.GameName || server.game_name || server.Game || "Unknown",
-        status: getStatusString(server.ServiceStatus || server.Status || server.status),
-        ip: server.IpAddress || server.ip_address || server.Ip || "",
-        port: server.GamePort || server.game_port || server.Port || 0,
-        slots: server.Slots || server.slots || server.MaxPlayers || 0,
-        players: server.OnlinePlayers || server.online_players || server.CurrentPlayers || 0,
-        location: server.Datacenter || server.datacenter || server.Location || "Unknown",
-        cpu: server.CpuUsage || server.cpu_usage || 0,
-        memory: server.MemoryUsage || server.memory_usage || server.MemoryPercent || 0,
-        disk: server.DiskUsage || server.disk_usage || server.DiskPercent || 0,
-        startedAt: server.StartedOn || server.started_on || server.StartTime || null,
-      };
-      console.log(`[Servers] Transformed server:`, transformed);
-      return transformed;
-    });
+    const transformedServers = userServices.map((server) => ({
+      id: server.ServiceId || server.service_id || server.Id || server.id,
+      name: server.DisplayName || server.ConnectionInfo || server.display_name || server.Name || "Game Server",
+      game: server.GameName || server.game_name || server.Game || "Unknown",
+      status: getStatusString(server.ServiceStatus || server.Status || server.status),
+      ip: server.IpAddress || server.ip_address || server.Ip || "",
+      port: server.GamePort || server.game_port || server.Port || 0,
+      slots: server.Slots || server.slots || server.MaxPlayers || 0,
+      players: server.OnlinePlayers || server.online_players || server.CurrentPlayers || 0,
+      location: server.Datacenter || server.datacenter || server.Location || "Unknown",
+      cpu: server.CpuUsage || server.cpu_usage || 0,
+      memory: server.MemoryUsage || server.memory_usage || server.MemoryPercent || 0,
+      disk: server.DiskUsage || server.disk_usage || server.DiskPercent || 0,
+      startedAt: server.StartedOn || server.started_on || server.StartTime || null,
+    }));
 
     return NextResponse.json({ servers: transformedServers });
   } catch (error) {
