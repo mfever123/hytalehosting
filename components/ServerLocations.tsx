@@ -6,15 +6,15 @@ import { useState } from "react";
 import Image from "next/image";
 
 const locations = [
-  { name: "Helsinki", country: "Finland", x: 55, y: 18 },
-  { name: "London", country: "UK", x: 46, y: 24 },
-  { name: "Paris", country: "France", x: 47, y: 28 },
-  { name: "Montreal", country: "Canada", x: 24, y: 26 },
-  { name: "New York", country: "USA", x: 24, y: 32 },
-  { name: "Los Angeles", country: "USA", x: 12, y: 34 },
-  { name: "Miami", country: "USA", x: 21, y: 40 },
-  { name: "Singapore", country: "Singapore", x: 77, y: 54 },
-  { name: "Sydney", country: "Australia", x: 88, y: 74 },
+  { name: "Helsinki", country: "Finland", x: 55, y: 20 },      // 60°N, 25°E - Scandinavia
+  { name: "London", country: "UK", x: 48, y: 27 },             // 51°N, 0°W - British Isles
+  { name: "Paris", country: "France", x: 49, y: 29 },          // 49°N, 2°E - Western Europe
+  { name: "Montreal", country: "Canada", x: 27, y: 28 },       // 45°N, 74°W - Eastern Canada
+  { name: "New York", country: "USA", x: 26, y: 35 },          // 41°N, 74°W - US East Coast
+  { name: "Los Angeles", country: "USA", x: 17, y: 39 },       // 34°N, 118°W - US West Coast
+  { name: "Miami", country: "USA", x: 24, y: 45 },             // 26°N, 80°W - Florida
+  { name: "Singapore", country: "Singapore", x: 77, y: 53 },   // 1°N, 104°E - Southeast Asia
+  { name: "Sydney", country: "Australia", x: 89, y: 73 },      // 34°S, 151°E - East Australia
 ];
 
 export default function ServerLocations() {
